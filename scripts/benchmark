@@ -1,0 +1,99 @@
+#!/usr/bin/env bash
+
+set -e
+set -o pipefail
+
+DB_DIR=/pmem/zzunny/pmem-rocksdb/kv
+WAL_DIR=/pmem/zzunny/pmem-rocksdb/wal
+
+key_size=48
+value_size=43
+num_kvs=50000000 #5000만
+#num_kvs=5000000 #5000만
+num_threads=$2
+#query_num=420000000 #4억
+query_num=400000000 #4억
+# qps 100000x
+const_params="
+	--db=$DB_DIR \
+	--wal_dir=$WAL_DIR \
+	--threads=$num_threads \
+	--use_direct_io_for_flush_and_compaction=true \
+	--use_direct_reads=true \
+	--cache_size=268435456 \
+	--key_size=$key_size \
+	--num=$(($num_kvs / $num_threads))"
+	
+mixgraph_params="
+	--benchmarks="mixgraph" \
+	--use_existing_db=true \
+	--value_k=0.2615 \
+	--value_sigma=25.45 \
+	--iter_k=2.517 \
+	--iter_sigma=14.236 \
+	--mix_get_ratio=0.83 \
+	--mix_put_ratio=0.14 \
+	--mix_seek_ratio=0.03 \
+	--sine_mix_rate_interval_milliseconds=5000 \
+	--sine_a=1000 \
+	--sine_b=0.00000000073 \
+	--sine_d=450000000 \
+	--perf_level=3 \
+	--reads=$(($query_num / $num_threads))"
+
+cd ..
+if [ "${1,,}" == "fillrand" ]; then
+	cd -
+	./clear_db.sh
+	cd -
+	./db_bench \
+		--benchmarks=fillrandom \
+		--perf_level=3 \
+		--value_size=$value_size \
+		$const_params
+elif [ "${1,,}" == "allrand" ]; then
+	echo "MixGraph - All Random"
+	./db_bench \
+		$const_params \
+		$mixgraph_params \
+		--keyrange_num=1 \
+		--history_file_name="/home/zzunny/KVstores/pmem-rocksdb/scripts/output/all_random.dat"
+elif [ "${1,,}" == "alldist" ]; then
+	echo "MixGraph - All Dist"
+	./db_bench \
+		$const_params \
+		$mixgraph_params \
+		--key_dist_a=0.002312 \
+		--key_dist_b=0.3467 \
+		--keyrange_num=1  \
+		--history_file_name="/home/zzunny/KVstores/pmem-rocksdb/scripts/output/all_dist.dat"
+elif [ "${1,,}" == "prefixrand" ]; then
+	echo "MixGraph - Prefix Random"
+	./db_bench \
+		$const_params \
+		$mixgraph_params \
+		--keyrange_dist_a=14.18 \
+		--keyrange_dist_b=2.917 \
+		--keyrange_dist_c=0.0164 \
+		--keyrange_dist_d=0.08082 \
+		--keyrange_num=30  \
+		--history_file_name="/home/zzunny/KVstores/pmem-rocksdb/scripts/output/prefix_random.dat"
+elif [ "${1,,}" == "prefixdist" ]; then
+	echo "Prefix Dist"
+	./db_bench \
+		$const_params \
+		$mixgraph_params \
+		--key_dist_a=0.002312 \
+		--key_dist_b=0.3467 \
+		--keyrange_dist_a=14.18 \
+		--keyrange_dist_b=2.917 \
+		--keyrange_dist_c=0.0164 \
+		--keyrange_dist_d=0.08082 \
+		--keyrange_num=30  \
+		--history_file_name="/home/zzunny/KVstores/pmem-rocksdb/scripts/output/prefix_dist.dat"
+else
+	echo "<Usage> fillrand / allrand / alldist / prefixrand / prefixdist"
+fi
+cd -
+
+

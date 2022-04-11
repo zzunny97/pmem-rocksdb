@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+set -e
+set -o pipefail
+cd ..
+make ROCKSDB_ON_DCPMM=1 db_bench -j DEBUG_LEVEL=0
+cd -
