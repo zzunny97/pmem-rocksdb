@@ -12,7 +12,7 @@
 
 using namespace ROCKSDB_NAMESPACE;
 
-std::string kDBPath = "/tmp/rocksdb_simple_example";
+std::string kDBPath = "/pmem0/rocksdb_zzunny";
 
 int main() {
   DB* db;

@@ -1,0 +1,1 @@
+make ROCKSDB_ON_DCPMM=1 static_lib -j
